@@ -1,0 +1,6 @@
+id,title,content
+1,Account Creation,Users can create an account by going to the homepage and clicking on the Sign In button. From there, they should select the option to create a new account and fill out the required details.
+2,Doctor Appointment,Users can make an appointment with a doctor by clicking on 'Our Doctors' in the navigation bar. They should then select their preferred doctor and fill out the appointment form to schedule a session.
+3,Group Creation,Users can create groups by clicking on 'Groups' in the navigation bar and filling out the group creation form.
+4,Post Creation,Users can create posts by going to 'Your Feed' in the navigation bar and submitting the post creation form.
+5,What to use for payment,Users can use their stripe account for payment.

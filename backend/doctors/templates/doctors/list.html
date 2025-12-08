@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>All Doctors</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+            max-width: 800px;
+            margin: auto;
+        }
+        li {
+            background: #fff;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        img {
+            border-radius: 10px;
+            margin-right: 20px;
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+        }
+        a {
+            color: #0070f3;
+            text-decoration: none;
+            margin-left: auto;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>All Doctors</h1>
+    <ul>
+        {% for doctor in doctors %}
+        <li>
+            <img src="{{ doctor.photo.url }}" alt="{{ doctor.doctor_name }}">
+            <strong>{{ doctor.doctor_name }}</strong>
+            <!-- Make sure this matches your urls.py -->
+            <a href="{% url 'doctor_detail' doctor.id %}">View Details</a>
+
+        </li>
+        {% empty %}
+        <li>No doctors available.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

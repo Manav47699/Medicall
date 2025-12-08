@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Successful</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f9f9f9; padding: 50px; text-align: center; }
+        h1 { color: #4CAF50; }
+        p { font-size: 18px; margin: 10px 0; }
+        a { display: inline-block; margin-top: 20px; padding: 10px 20px; background-color: #0070f3; 
+            color: white; text-decoration: none; border-radius: 5px; }
+        a:hover { background-color: #005bb5; }
+    </style>
+</head>
+<body>
+
+    <h1>Payment Successful!</h1>
+    <p>Thank you {{ appointment.patient_name }}. Your appointment with Dr. {{ appointment.doctor.doctor_name }} is confirmed.</p>
+    <p>Doctor has been notified via email.</p>
+    <a href="{% url 'doctors_list' %}">Back to Doctors</a>
+
+</body>
+</html>
