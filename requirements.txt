@@ -1,0 +1,36 @@
+#django backend
+django
+djangorestframework
+django-cors-headers
+django-allauth
+PyJWT
+
+
+
+
+#mostly for chatbot (HTTP METHODS)
+fastapi
+uvicorn
+
+#for RAG
+pandas
+langchain
+langchain-ollama
+langchain-chroma
+
+#for stt (speech to text)
+openai-whisper
+#torch --index-url https://download.pytorch.org/whl/cpu     (install this sepreraely)
+
+#payments
+stripe
+
+#extras
+python-multipart
+python-dotenv
+python-decouple
+cryptography
+
+
+pydantic
+pillow
