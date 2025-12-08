@@ -35,7 +35,7 @@
 # 2025, nov 29, day 9: added payment with stripe feature. Dont know how but is seems like it is working atleast.
 -> will try to add the email sending feature tommorow.
 
-# dec 4, day 92: added a chatbot to Medicall at /chat route with Ollama(qwen, 1.5B model)
+# dec 4, day 10: added a chatbot to Medicall at /chat route with Ollama(qwen, 1.5B model)
 -> create the folder structure and installed the dependecies.
 medicall/
 ├── backend/
@@ -47,7 +47,10 @@ medicall/
    └──main.py                 #main file that return the chatbot response
 
 
-# dec 5 ,day 93: added rag to the Mediall chatbot with Ollama(mxbai-embed-large).
+# dec 5 ,day 11: added rag to the Mediall chatbot with Ollama(mxbai-embed-large).
 -> added the instruction_one.csv file and made the rag work some how.
+
+# dec 8, day 12: added speech feature to the chatbot (whisper-tiny) and fixed the virtual env that was corrupted.
+-> reinstalled venv and all the dependencies to make it work again
 
 
