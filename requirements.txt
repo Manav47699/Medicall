@@ -34,3 +34,5 @@ cryptography
 
 pydantic
 pillow
+
+#for blood donation feature

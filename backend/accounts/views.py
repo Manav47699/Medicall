@@ -1,9 +1,4 @@
-#######################for signup#####################
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
-from rest_framework import status
-from .serializers import SignupSerializer
-
+####################### signup #####################
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.views.decorators.csrf import csrf_exempt
@@ -15,36 +10,47 @@ def signup_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=400)
 
+    # Get data from POST
     username = request.POST.get("username")
     password = request.POST.get("password")
-    bio = request.POST.get("bio", "")
-    profile_pic = request.FILES.get("profile_pic")
+    email = request.POST.get("email", "")
+    phone_number = request.POST.get("phone_number", "")
+    age = request.POST.get("age")
+    gender = request.POST.get("gender", "")
+    share_location_for_blood = request.POST.get("share_location_for_blood", "false").lower() == "true"
+    latitude = request.POST.get("latitude")
+    longitude = request.POST.get("longitude")
 
+    # Validations
     if not username or not password:
         return JsonResponse({"error": "Username and password are required"}, status=400)
 
     if User.objects.filter(username=username).exists():
         return JsonResponse({"error": "Username already exists"}, status=400)
 
-    # create user
-    user = User.objects.create(username=username, password=make_password(password))
-    # create profile
-    Profile.objects.create(user=user, bio=bio, profile_pic=profile_pic)
+    # 1. create user
+    user = User.objects.create(username=username, email=email, password=make_password(password))
+
+    # 2. create profile
+    Profile.objects.create(
+        user=user,
+        phone_number=phone_number,
+        age=int(age) if age else None,
+        gender=gender,
+        share_location_for_blood=share_location_for_blood,
+        latitude=float(latitude) if latitude else None,
+        longitude=float(longitude) if longitude else None
+    )
 
     return JsonResponse({
         "id": user.id,
         "username": user.username,
-        "profile_pic": f"{profile_pic.url}" if profile_pic else None,
         "message": "User created successfully"
     })
 
-######################################################
+#####################################################
 
-
-
-###############for login#################
-from .serializers import LoginSerializer
-
+####################### login #######################
 from django.contrib.auth import authenticate
 
 @csrf_exempt
@@ -66,13 +72,17 @@ def login_view(request):
     return JsonResponse({
         "id": user.id,
         "username": user.username,
-        "profile_pic": profile.profile_pic.url if profile.profile_pic else None,
+        "phone_number": profile.phone_number,
+        "age": profile.age,
+        "gender": profile.gender,
+        "share_location_for_blood": profile.share_location_for_blood,
+        "latitude": profile.latitude,
+        "longitude": profile.longitude,
         "message": "Login successful"
     })
-
 #####################################################
 
-###########for user count in the home page############
+####################### user count #################
 from django.contrib.auth.models import User
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -81,6 +91,3 @@ from rest_framework.response import Response
 def user_count(request):
     count = User.objects.count()
     return Response({"count": count})
-
-
-###################################################
