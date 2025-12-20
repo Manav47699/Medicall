@@ -37,3 +37,8 @@ pillow
 
 #for blood donation feature
 geopy
+
+
+# npm install (for map) 
+leaflet 
+react-leaflet

@@ -159,6 +159,7 @@ def blood_donors(request):
             "longitude": donor.longitude,
             "age": donor.age,
             "gender": donor.gender,
+            "phone": donor.phone_number
         })
 
     return Response(data)
