@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function Signup() {
@@ -12,51 +12,10 @@ export default function Signup() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
+  const [city, setCity] = useState("");
   const [shareLocation, setShareLocation] = useState(false);
 
-  // Geolocation
-  const [latitude, setLatitude] = useState(null);
-  const [longitude, setLongitude] = useState(null);
-
   const [message, setMessage] = useState("");
-
-  // Force fresh location every time
-  const getLocation = () => {
-    if (!navigator.geolocation) {
-      alert("Geolocation is not supported by your browser.");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLatitude(position.coords.latitude);
-        setLongitude(position.coords.longitude);
-        console.log(
-          "High-accuracy coordinates:",
-          position.coords.latitude,
-          position.coords.longitude,
-          "Accuracy (m):",
-          position.coords.accuracy
-        );
-      },
-      (error) => {
-        console.error("Error getting location:", error);
-        alert(
-          "Could not get your precise location. Please enable GPS and allow location access."
-        );
-      },
-      {
-        enableHighAccuracy: true, // use GPS if available
-        timeout: 10000,           // wait max 10 seconds
-        maximumAge: 0,            // do not use cached coordinates
-      }
-    );
-  };
-
-  // Get location on component mount
-  useEffect(() => {
-    getLocation();
-  }, []);
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -67,10 +26,8 @@ export default function Signup() {
     formData.append("phone_number", phoneNumber);
     formData.append("age", age);
     formData.append("gender", gender);
+    formData.append("city", city);
     formData.append("share_location_for_blood", shareLocation);
-
-    if (latitude !== null) formData.append("latitude", latitude.toFixed(6));
-    if (longitude !== null) formData.append("longitude", longitude.toFixed(6));
 
     try {
       const res = await fetch("http://127.0.0.1:8000/accounts/signup/", {
@@ -85,8 +42,8 @@ export default function Signup() {
           "user",
           JSON.stringify({ id: data.id, username: data.username })
         );
-        setMessage("Signup successful! Redirecting to posts...");
-        router.push("/posts");
+        setMessage("Signup successful! Redirecting...");
+        router.push("/posts"); // or wherever you want to redirect
       } else {
         setMessage(data.error || JSON.stringify(data));
       }
@@ -134,6 +91,13 @@ export default function Signup() {
           placeholder="Gender"
           value={gender}
           onChange={(e) => setGender(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="City (for blood donation location)"
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          required={shareLocation} // only required if user opts in
         />
         <label>
           <input
