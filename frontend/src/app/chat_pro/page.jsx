@@ -21,7 +21,7 @@ export default function ChatProPage() {
     setMessages((prev) => [...prev, userMessage]);
     setLoading(true);
 
-    const res = await fetch("http://127.0.0.1:8000/chat", {
+    const res = await fetch("http://127.0.0.1:8080/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -65,7 +65,7 @@ export default function ChatProPage() {
         formData.append("file", audioBlob, "recording.wav");
 
         // send to STT
-        const response = await fetch("http://127.0.0.1:8000/stt", {
+        const response = await fetch("http://127.0.0.1:8080/stt", {
           method: "POST",
           body: formData,
         });

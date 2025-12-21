@@ -164,3 +164,23 @@ def blood_donors(request):
 
     return Response(data)
 ######################################################
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def current_user(request):
+    user = request.user
+    data = {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "latitude": getattr(user, "latitude", None),  # if you store it in your model
+        "longitude": getattr(user, "longitude", None),
+        "city": getattr(user, "city", None),
+        "blood_group": getattr(user, "blood_group", None),
+    }
+    return Response(data)
+

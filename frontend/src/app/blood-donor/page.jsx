@@ -4,74 +4,79 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 
-/* ---------------- DYNAMIC IMPORTS (NO SSR) ---------------- */
+/* -------- DYNAMIC LEAFLET IMPORTS -------- */
 const MapContainer = dynamic(
   () => import("react-leaflet").then((m) => m.MapContainer),
   { ssr: false }
 );
-
 const TileLayer = dynamic(
   () => import("react-leaflet").then((m) => m.TileLayer),
   { ssr: false }
 );
-
 const Marker = dynamic(
   () => import("react-leaflet").then((m) => m.Marker),
   { ssr: false }
 );
-
 const Popup = dynamic(
   () => import("react-leaflet").then((m) => m.Popup),
   { ssr: false }
 );
-/* ---------------------------------------------------------- */
 
-/* ---------------- DISTANCE FUNCTION (Haversine formula 🌍✨) ---------------- */
+/* -------- DISTANCE FUNCTION -------- */
 function getDistanceKm(lat1, lon1, lat2, lon2) {
-  const R = 6371;
+  const R = 6371; // km
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
-
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) ** 2;
-
   return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
-/* --------------------------------------------------- */
 
 export default function BloodDonorMap() {
   const [donors, setDonors] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCity, setSelectedCity] = useState(null);
+  const [user, setUser] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [currentCity, setCurrentCity] = useState("Your area");
 
-  // TEMP: user city + coords (later from profile)
-  const userCity = "Dharan";
-  const userLat = 26.8129;
-  const userLng = 87.2840;
-
-  /* ---------------- FETCH DONORS ---------------- */
+  /* -------- FETCH DONORS AND CURRENT USER -------- */
   useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (!stored) return;
+
+    const parsedUser = JSON.parse(stored);
+    setUser(parsedUser);
+
     fetch("http://127.0.0.1:8000/accounts/blood-donors/")
       .then((res) => res.json())
       .then((data) => {
         setDonors(data);
+
+        // Filter backend donors to get the current user's data
+        const currentBackendUser = data.find(
+          (d) => d.username === parsedUser.username
+        );
+
+        if (currentBackendUser) {
+          setCurrentLocation({
+            latitude: currentBackendUser.latitude,
+            longitude: currentBackendUser.longitude,
+          });
+          setCurrentCity(currentBackendUser.city || "Your area");
+        }
+
         setLoading(false);
       })
-      .catch((err) => {
-        console.error("Error fetching donors:", err);
-        setLoading(false);
-      });
+      .catch(() => setLoading(false));
   }, []);
-  /* ---------------------------------------------- */
 
-  /* ---------------- FIX LEAFLET ICONS ---------------- */
+  /* -------- LEAFLET ICON FIX -------- */
   useEffect(() => {
     import("leaflet").then((L) => {
       delete L.Icon.Default.prototype._getIconUrl;
-
       L.Icon.Default.mergeOptions({
         iconRetinaUrl:
           "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
@@ -82,130 +87,138 @@ export default function BloodDonorMap() {
       });
     });
   }, []);
-  /* ---------------------------------------------- */
 
-  if (loading) {
-    return <h2 style={{ textAlign: "center" }}>Loading map...</h2>;
-  }
+  /* -------- LOGOUT -------- */
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    window.location.href = "/global_posts";
+  };
 
+  /* -------- USER COORDINATES -------- */
+  const userLat = currentLocation?.latitude || 26.8129;
+  const userLng = currentLocation?.longitude || 87.2840;
+
+  /* -------- DONORS WITH DISTANCE -------- */
   const donorsWithDistance = donors.map((d) => ({
     ...d,
     distance: getDistanceKm(userLat, userLng, d.latitude, d.longitude),
   }));
 
-  const cityDonors = donorsWithDistance.filter(
-    (d) => d.city?.toLowerCase() === userCity.toLowerCase()
-  );
-
+  const cityDonors = donorsWithDistance.filter((d) => d.city === currentCity);
   const nearestDonors = [...donorsWithDistance]
     .sort((a, b) => a.distance - b.distance)
     .slice(0, 5);
 
-  const sidebarDonors = selectedCity
-    ? donorsWithDistance.filter((d) => d.city === selectedCity)
-    : null;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        Loading donors...
+      </div>
+    );
+  }
 
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      {/* ---------------- SIDEBAR ---------------- */}
-      <div
-        style={{
-          width: "350px",
-          padding: "15px",
-          background: "#f9f9f9",
-          color: "#000", // 👈 BLACK TEXT FIX
-          overflowY: "auto",
-          borderRight: "1px solid #ddd",
-        }}
-      >
-        {!selectedCity ? (
-          <>
-            <h3>Medicall users in your city ({userCity})</h3>
-            {cityDonors.length === 0 && <p>No donors found.</p>}
-            {cityDonors.map((d) => (
-              <div key={d.id} style={{ marginBottom: "12px" }}>
-                <strong>{d.username}</strong>
-                <br />
-                Age: {d.age ?? "N/A"} | {d.gender || "N/A"}
-                <br />
-                📞 {d.phone || "N/A"}
-              </div>
-            ))}
-
-            <hr />
-
-            <h3>Nearest to your city</h3>
-            {nearestDonors.map((d) => (
-              <div key={d.id} style={{ marginBottom: "12px" }}>
-                <strong>{d.username}</strong>
-                <br />
-                {d.city} • {d.distance.toFixed(1)} km
-                <br />
-                📞 {d.phone || "N/A"}
-              </div>
-            ))}
-          </>
-        ) : (
-          <>
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <div className="w-96 bg-white/95 backdrop-blur-md shadow-2xl overflow-y-auto border-r-4 border-red-200 p-6">
+        {user && (
+          <div className="mb-6 flex justify-between items-center">
+            <h2 className="text-2xl font-bold text-red-600">
+              Hello, {user.username}
+            </h2>
             <button
-              onClick={() => setSelectedCity(null)}
-              style={{ marginBottom: "10px" }}
+              onClick={handleLogout}
+              className="px-3 py-1 bg-red-500 text-white rounded-lg"
             >
-              ← Back
+              Logout
             </button>
-            <h3>Medicall users in {selectedCity}</h3>
-            {sidebarDonors.map((d) => (
-              <div key={d.id} style={{ marginBottom: "12px" }}>
-                <strong>{d.username}</strong>
-                <br />
-                Age: {d.age ?? "N/A"}
-                <br />
-                Gender: {d.gender || "N/A"}
-                <br />
-                📞 {d.phone || "N/A"}
-              </div>
-            ))}
-          </>
+          </div>
         )}
+
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-red-600 mb-3">
+            Donors in {currentCity} (your city)
+          </h3>
+          {cityDonors.length === 0 ? (
+            <p className="text-gray-600">No donors found in your city.</p>
+          ) : (
+            cityDonors.map((d) => (
+              <div
+                key={d.id}
+                className="bg-red-50 border-2 border-red-200 rounded-xl p-3 mb-3"
+              >
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-bold text-red-700">{d.username}</span>
+                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                    {d.blood_group || "N/A"}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-700">
+                  <p>Age: {d.age ?? "N/A"}</p>
+                  <p>Gender: {d.gender || "N/A"}</p>
+                  <p>📞 {d.phone || "N/A"}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div>
+          <h3 className="text-xl font-bold text-rose-600 mb-3">
+            Nearest Donors (from {currentCity})
+          </h3>
+          {nearestDonors.map((d) => (
+            <div
+              key={d.id}
+              className="bg-rose-50 border-2 border-rose-200 rounded-xl p-3 mb-3"
+            >
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-rose-700">{d.username}</span>
+                <span className="bg-rose-500 text-white text-xs px-2 py-1 rounded-full">
+                  {d.blood_group || "N/A"}
+                </span>
+              </div>
+              <div className="text-sm text-gray-700">
+                <p>City: {d.city}</p>
+                <p>Distance: {d.distance.toFixed(1)} km</p>
+                <p>📞 {d.phone || "N/A"}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* ---------------- MAP ---------------- */}
-      <MapContainer
-        center={[28.3949, 84.124]}
-        zoom={7}
-        style={{ flex: 1 }}
-      >
-        <TileLayer
-          attribution="&copy; OpenStreetMap contributors"
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+      {/* Map */}
+      <div className="flex-1">
+        <MapContainer
+          center={[userLat, userLng]}
+          zoom={7}
+          style={{ height: "100%", width: "100%" }}
+        >
+          <TileLayer
+            attribution="&copy; OpenStreetMap contributors"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
 
-        {donors.map((donor) => (
-          <Marker
-            key={donor.id}
-            position={[donor.latitude, donor.longitude]}
-          >
-            <Popup>
-              <strong>{donor.username}</strong>
-              <br />
-              City: {donor.city}
-              <br />
-              Age: {donor.age ?? "N/A"}
-              <br />
-              Gender: {donor.gender || "N/A"}
-              <br />
-              📞 {donor.phone || "N/A"}
-              <br />
-              <button
-                style={{ marginTop: "5px" }}
-                onClick={() => setSelectedCity(donor.city)}
-              >
-                View more
-              </button>
-            </Popup>
-          </Marker>
-        ))}
-      </MapContainer>
+          {donors.map((donor) => (
+            <Marker
+              key={donor.id}
+              position={[donor.latitude, donor.longitude]}
+            >
+              <Popup>
+                <div>
+                  <h4 className="font-bold text-red-600">{donor.username}</h4>
+                  <p>City: {donor.city}</p>
+                  <p>Blood Group: {donor.blood_group || "N/A"}</p>
+                  <p>Age: {donor.age ?? "N/A"}</p>
+                  <p>Gender: {donor.gender || "N/A"}</p>
+                  <p>📞 {donor.phone || "N/A"}</p>
+                </div>
+              </Popup>
+            </Marker>
+          ))}
+        </MapContainer>
+      </div>
     </div>
   );
 }
