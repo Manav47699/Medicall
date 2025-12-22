@@ -35,11 +35,8 @@ urlpatterns = [
     path('doctors/', include('doctors.urls')),
     path('accounts/', include('accounts.urls')),
     #path("appointments/", include("appointments.urls")),
+     path("email/", include("email_app.urls")),
     
-
-
-
-
 
 
 

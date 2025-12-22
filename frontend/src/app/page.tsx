@@ -76,7 +76,7 @@ export default function HomePage() {
           }}
         >
           <div style={{ fontSize: "22px", fontWeight: "700", color: "#c94040" }}>
-            MediPath
+            Medic-all
           </div>
           <div style={{ display: "flex", gap: "35px" }}>
             {["Sign In", "Join Our Team", "Tech Stack", "About the Developer"].map((item, i) => (

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'groups',
     'doctors',
     'accounts',
+    'email_app',
     
 
 
@@ -256,3 +257,20 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 # STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET')
 
 #########################################################
+
+################for automatic gmail from backend##################
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+EMAIL_HOST = "smtp.gmail.com"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+EMAIL_HOST_USER = "medicallmanav@gmail.com"
+EMAIL_HOST_PASSWORD = "jazbyljvquhfnbqg"
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+
+
+
+######################################################################
