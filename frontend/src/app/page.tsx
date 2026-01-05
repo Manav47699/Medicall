@@ -400,11 +400,11 @@ export default function HomePage() {
             {[
               { title: "REST Framework", body: "Used as the main backend", emoji: "🔧" },
               { title: "Next.js", body: "Used as the main frontend", emoji: "⚛️" },
-              { title: "FastAPI", body: "High-performance async API framework", emoji: "⚡" },
+              { title: "FastAPI", body: "For fetching fast steaming response along with ollama's generation", emoji: "⚡" },
               { title: "Ollama", body: "Running local language models efficiently", emoji: "🤖" },
-              { title: "LangChain", body: "Building context-aware reasoning chains", emoji: "🔗" },
-              { title: "Django SQLite", body: "Default database for rapid development", emoji: "💾" },
-              { title: "Django Forms", body: "Handling form validation and rendering", emoji: "📝" },
+              { title: "LangChain", body: "langchain_chroma and langchain_ollama for RAG", emoji: "🔗" },
+              { title: "Supabase", body: "For third party authentication", emoji: "💾" },
+              { title: "Openai Whisper", body: "For integrating speech-to-text in chatbot systems", emoji: "📝" },
               { title: "Stripe (Test Mode)", body: "Payment processing integration", emoji: "💳" }
             ].map((tech, i) => (
               <div

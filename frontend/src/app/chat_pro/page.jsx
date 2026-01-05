@@ -8,6 +8,9 @@ export default function ChatProPage() {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
 
+  // 🔊 TTS STATE
+  const [ttsEngine, setTtsEngine] = useState(null); // "kitten" | "pyttsx3" | null
+
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
@@ -27,14 +30,20 @@ export default function ChatProPage() {
       body: JSON.stringify({
         question: text,
         history: messages,
+        tts_engine: ttsEngine, // 🔊 send selected TTS
       }),
     });
 
     const data = await res.json();
     const botMessage = { role: "assistant", content: data.answer };
-
     setMessages((prev) => [...prev, botMessage]);
     setLoading(false);
+
+    // 🔊 PLAY AUDIO IF AVAILABLE
+    if (data.audio_url && ttsEngine) {
+      const audio = new Audio(`http://127.0.0.1:8080${data.audio_url}`);
+      audio.play().catch(() => {});
+    }
   }
 
   // -----------------------------
@@ -54,28 +63,25 @@ export default function ChatProPage() {
   };
 
   // -----------------------------
-  // 3) STOP → SEND TO /stt → THEN SEND TO CHAT
+  // 3) STOP → STT → CHAT
   // -----------------------------
   const stopRecording = () => {
     return new Promise((resolve) => {
       mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
 
         const formData = new FormData();
         formData.append("file", audioBlob, "recording.wav");
 
-        // send to STT
         const response = await fetch("http://127.0.0.1:8080/stt", {
           method: "POST",
           body: formData,
         });
 
         const data = await response.json();
-        const transcribed = data.text;
-
-        // Show the transcribed text in chat AND send it to the bot
-        await sendMessage(transcribed);
-
+        await sendMessage(data.text);
         resolve();
       };
 
@@ -88,21 +94,28 @@ export default function ChatProPage() {
   // UI
   // -----------------------------
   return (
-    <div className="w-full h-screen flex flex-col items-center p-6 bg-gray-100 text-black">
+    <div className="w-full h-screen flex flex-col items-center bg-gray-50 text-black">
 
-      <h1 className="text-3xl font-bold mb-4">Medicall Pro Chat (Voice Enabled)</h1>
+      {/* HEADER */}
+      <header className="w-full bg-white shadow-sm py-4 px-6 mb-4">
+        <h1 className="text-2xl font-semibold text-center">
+          {/* 🏥 Medical AI Assistant */} CHATBOT WITH RAG, Speech-to-text & Text-to-speech
+        </h1>
+        <p className="text-center text-sm text-gray-500">
+          {/* Not a replacement for professional medical advice */}
+        </p>
+      </header>
 
       {/* CHAT WINDOW */}
-      <div className="w-full max-w-xl h-[70vh] bg-white rounded-lg shadow p-4 overflow-y-auto border 
-                      space-y-3">
+      <div className="w-full max-w-2xl flex-1 bg-white rounded-xl shadow p-4 overflow-y-auto space-y-3 border">
 
         {messages.map((msg, i) => (
           <div
             key={i}
-            className={`max-w-[80%] p-3 rounded-xl text-sm leading-relaxed
+            className={`max-w-[75%] p-3 rounded-xl text-sm leading-relaxed
               ${msg.role === "user"
-                ? "bg-blue-500 text-white ml-auto"
-                : "bg-gray-200 text-gray-900"
+                ? "bg-blue-600 text-white ml-auto"
+                : "bg-gray-100 text-gray-900"
               }`}
           >
             {msg.content}
@@ -110,49 +123,79 @@ export default function ChatProPage() {
         ))}
 
         {loading && (
-          <div className="p-2 bg-gray-300 text-gray-700 rounded-lg inline-block animate-pulse">
+          <div className="text-gray-500 text-sm animate-pulse">
             Thinking…
           </div>
         )}
       </div>
 
-      {/* TEXT INPUT + SEND */}
-      <div className="w-full max-w-xl flex mt-4 gap-2">
+      {/* INPUT */}
+      <div className="w-full max-w-2xl flex mt-4 gap-2 px-2">
         <input
-          className="flex-1 p-3 border rounded-lg outline-none text-black bg-white"
+          className="flex-1 p-3 border rounded-lg outline-none bg-white"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask something..."
+          placeholder="Ask a medical question..."
         />
         <button
           onClick={() => {
             sendMessage(input);
             setInput("");
           }}
-          className="bg-blue-600 hover:bg-blue-700 transition text-white px-6 rounded-lg"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 rounded-lg"
         >
           Send
         </button>
       </div>
 
-      {/* VOICE BUTTONS */}
-      <div className="w-full max-w-xl flex mt-3 gap-3 justify-center">
+      {/* VOICE CONTROLS */}
+      <div className="w-full max-w-2xl flex flex-wrap gap-3 mt-3 justify-center">
 
         {!recording ? (
           <button
             onClick={startRecording}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+            className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg"
           >
-            🎤 Start Recording
+             Use Speech instead to typing your query manually
           </button>
         ) : (
           <button
             onClick={stopRecording}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg"
+            className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg"
           >
             ⏹ Stop & Send
           </button>
         )}
+
+        {/* TTS BUTTONS */}
+        <button
+          onClick={() => setTtsEngine("kitten")}
+          className={`px-5 py-2 rounded-lg border
+            ${ttsEngine === "kitten"
+              ? "bg-purple-600 text-white"
+              : "bg-white text-black"
+            }`}
+        >
+           Enable KittenTTS
+        </button>
+
+        <button
+          onClick={() => setTtsEngine("pyttsx3")}
+          className={`px-5 py-2 rounded-lg border
+            ${ttsEngine === "pyttsx3"
+              ? "bg-orange-600 text-white"
+              : "bg-white text-black"
+            }`}
+        >
+           Enable pyttsx3
+        </button>
+
+        <button
+          onClick={() => setTtsEngine(null)}
+          className="px-5 py-2 rounded-lg border bg-gray-200"
+        >
+          {/* 🔇 Disable TTS */} Enable conversation mode
+        </button>
       </div>
     </div>
   );
