@@ -241,6 +241,9 @@ from decouple import config
 STRIPE_PUBLISHABLE_KEY = config('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = config('STRIPE_SECRET_KEY')
 
+STRIPE_WEBHOOK_SECRET = config('STRIPE_WEBHOOK_SECRET')
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For testing
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL')
 

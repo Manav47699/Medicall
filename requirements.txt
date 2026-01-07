@@ -42,3 +42,6 @@ geopy
 # npm install (for map) 
 leaflet 
 react-leaflet
+
+#IN COMMAND PROMPT, global
+curl -fsSL https://stripe.com/install.sh | sudo bash    #-> this installs the stripe CLI in your device which we will use later to to get out webhook secret (that we are using in our settings.py

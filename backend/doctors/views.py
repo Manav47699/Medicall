@@ -1,8 +1,14 @@
 import stripe
-from django.shortcuts import render, redirect, get_object_or_404
+import json
+
 from django.conf import settings
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+
 from django.core.mail import send_mail
+
 from .models import Doctor_model, Appointment
 from .forms import AppointmentForm
 
@@ -13,87 +19,140 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 # List all doctors
 def doctors_list_view(request):
     doctors = Doctor_model.objects.all()
-    return render(request, 'doctors/list.html', {'doctors': doctors})
+
+    data = []
+    for doctor in doctors:
+        data.append({
+            "id": doctor.id,
+            "name": doctor.doctor_name,
+            "email": doctor.doctor_email,
+            "qualifications": doctor.qualifications,
+        })
+
+    return JsonResponse(data, safe=False)
 
 
-# Doctor detail + appointment form
-def doctor_detail_view(request, doctor_id):
+#creating appointments
+@csrf_exempt
+def create_appointment(request, doctor_id):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
     doctor = get_object_or_404(Doctor_model, id=doctor_id)
 
-    if request.method == 'POST':
-        form = AppointmentForm(request.POST)
-        if form.is_valid():
-            appointment = form.save(commit=False)
-            appointment.doctor = doctor
-            if request.user.is_authenticated:
-                appointment.user = request.user
-            appointment.save()
+    data = json.loads(request.body)
 
-            # Redirect to Stripe checkout
-            return redirect(
-                'create_checkout_session', 
-                doctor_id=doctor.id, 
-                appointment_id=appointment.id
-            )
-    else:
-        form = AppointmentForm()
+    appointment = Appointment.objects.create(
+        doctor=doctor,
+        user=request.user if request.user.is_authenticated else None,
+        patient_name=data.get("patient_name"),
+        patient_age=data.get("patient_age"),
+        sex=data.get("sex"),
+        reason=data.get("reason"),
+        visit_time=data.get("visit_time"),
+        status="pending",
+    )
 
-    return render(request, 'doctors/detail.html', {'doctor': doctor, 'form': form})
+    return JsonResponse({
+        "appointment_id": appointment.id,
+        "message": "Appointment created"
+    })
 
 
-# Stripe checkout session
-def create_checkout_session(request, doctor_id, appointment_id):
+#creating a safe stripe checkout session
+@csrf_exempt
+def create_checkout_session(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "POST request required"}, status=400)
+
+    data = json.loads(request.body)
+    appointment_id = data.get("appointment_id")
+
     appointment = get_object_or_404(Appointment, id=appointment_id)
 
     checkout_session = stripe.checkout.Session.create(
-        payment_method_types=['card'],
+        payment_method_types=["card"],
+        mode="payment",
+
         line_items=[{
-            'price_data': {
-                'currency': 'usd',
-                'product_data': {
-                    'name': f'Appointment with {appointment.doctor.doctor_name}',
+            "price_data": {
+                "currency": "usd",
+                "product_data": {
+                    "name": f"Appointment with {appointment.doctor.doctor_name}",
                 },
-                'unit_amount': 5000,  # $50.00 in cents
+                "unit_amount": 5000,
             },
-            'quantity': 1,
+            "quantity": 1,
         }],
-        mode='payment',
-        success_url=request.build_absolute_uri('/doctors/success/') + f'?appointment_id={appointment.id}',
-        cancel_url=request.build_absolute_uri(f'/doctors/{doctor_id}/'),
+
+        metadata={
+            "appointment_id": str(appointment.id)
+        },
+
+        success_url="http://localhost:3000/payment-success",
+        cancel_url="http://localhost:3000/payment-cancel",
     )
 
     appointment.stripe_session_id = checkout_session.id
     appointment.save()
 
-    return redirect(checkout_session.url)
+    return JsonResponse({
+        "checkout_url": checkout_session.url
+    })
 
 
-# Payment success view
-def payment_success(request):
-    appointment_id = request.GET.get('appointment_id')
-    appointment = get_object_or_404(Appointment, id=appointment_id)
+#STRIPE webhook
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
 
-    # Mark as paid
-    appointment.status = 'paid'
-    appointment.paid_at = timezone.now()
-    appointment.save()
+    try:
+        event = stripe.Webhook.construct_event(
+            payload,
+            sig_header,
+            settings.STRIPE_WEBHOOK_SECRET
+        )
+    except ValueError:
+        return HttpResponse(status=400)
+    except stripe.error.SignatureVerificationError:
+        return HttpResponse(status=400)
 
-    # Send email to doctor
-    subject = f"New Appointment with {appointment.patient_name}"
-    message = f"""
-Appointment Details:
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        appointment_id = session["metadata"].get("appointment_id")
+
+        if appointment_id:
+            try:
+                appointment = Appointment.objects.get(id=appointment_id)
+
+                if appointment.status != "paid":
+                    appointment.status = "paid"
+                    appointment.paid_at = timezone.now()
+                    appointment.save()
+
+                    subject = f"New Appointment: {appointment.patient_name}"
+                    message = f"""
+New Appointment Confirmed (Payment Successful)
 
 Patient Name: {appointment.patient_name}
+Age: {appointment.patient_age}
 Sex: {appointment.sex}
 Reason: {appointment.reason}
 Visit Time: {appointment.visit_time}
-"""
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [appointment.doctor.doctor_email],
-        fail_silently=False
-    )
 
-    return render(request, 'doctors/success.html', {'appointment': appointment})
+Stripe Session ID: {session['id']}
+"""
+
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [appointment.doctor.doctor_email],
+                        fail_silently=False
+                    )
+
+            except Appointment.DoesNotExist:
+                pass
+
+    return HttpResponse(status=200)
