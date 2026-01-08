@@ -12,26 +12,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Doctors
-    path("api/doctors/", views.doctors_list_view, name="doctors-list"),
+    path('doctors/', views.doctors_list_view, name='doctors-list'),
+    path('doctors/<int:doctor_id>/create/', views.create_appointment, name='create-appointment'),
+    path('stripe/create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
+    path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
+    # path('appointments/<int:appointment_id>/', views.appointment_detail, name='appointment-detail'),
 
-    # Appointments
-    path(
-        "api/doctors/<int:doctor_id>/appointment/",
-        views.create_appointment,
-        name="create-appointment"
-    ),
-
-    # Stripe
-    path(
-        "api/stripe/create-checkout-session/",
-        views.create_checkout_session,
-        name="create-checkout-session"
-    ),
-
-    path(
-        "api/stripe/webhook/",
-        views.stripe_webhook,
-        name="stripe-webhook"
-    ),
 ]
+

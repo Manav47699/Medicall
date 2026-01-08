@@ -6,17 +6,17 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-
 from django.core.mail import send_mail
 
 from .models import Doctor_model, Appointment
-from .forms import AppointmentForm
 
 # Stripe API key
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
-# List all doctors
+# -----------------------------
+# LIST ALL DOCTORS (API)
+# -----------------------------
 def doctors_list_view(request):
     doctors = Doctor_model.objects.all()
 
@@ -32,7 +32,9 @@ def doctors_list_view(request):
     return JsonResponse(data, safe=False)
 
 
-#creating appointments
+# -----------------------------
+# CREATE APPOINTMENT (API)
+# -----------------------------
 @csrf_exempt
 def create_appointment(request, doctor_id):
     if request.method != "POST":
@@ -55,11 +57,13 @@ def create_appointment(request, doctor_id):
 
     return JsonResponse({
         "appointment_id": appointment.id,
-        "message": "Appointment created"
+        "message": "Appointment created successfully"
     })
 
 
-#creating a safe stripe checkout session
+# -----------------------------
+# CREATE STRIPE CHECKOUT SESSION
+# -----------------------------
 @csrf_exempt
 def create_checkout_session(request):
     if request.method != "POST":
@@ -73,22 +77,19 @@ def create_checkout_session(request):
     checkout_session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         mode="payment",
-
         line_items=[{
             "price_data": {
                 "currency": "usd",
                 "product_data": {
                     "name": f"Appointment with {appointment.doctor.doctor_name}",
                 },
-                "unit_amount": 5000,
+                "unit_amount": 5000,  # $50.00 in cents
             },
             "quantity": 1,
         }],
-
         metadata={
             "appointment_id": str(appointment.id)
         },
-
         success_url="http://localhost:3000/payment-success",
         cancel_url="http://localhost:3000/payment-cancel",
     )
@@ -101,7 +102,9 @@ def create_checkout_session(request):
     })
 
 
-#STRIPE webhook
+# -----------------------------
+# STRIPE WEBHOOK (AUTO PAYMENT CONFIRMATION)
+# -----------------------------
 @csrf_exempt
 def stripe_webhook(request):
     payload = request.body
@@ -114,10 +117,11 @@ def stripe_webhook(request):
             settings.STRIPE_WEBHOOK_SECRET
         )
     except ValueError:
-        return HttpResponse(status=400)
+        return HttpResponse(status=400)  # Invalid payload
     except stripe.error.SignatureVerificationError:
-        return HttpResponse(status=400)
+        return HttpResponse(status=400)  # Invalid signature
 
+    # Handle successful checkout
     if event["type"] == "checkout.session.completed":
         session = event["data"]["object"]
         appointment_id = session["metadata"].get("appointment_id")
@@ -131,6 +135,7 @@ def stripe_webhook(request):
                     appointment.paid_at = timezone.now()
                     appointment.save()
 
+                    # Send email to doctor
                     subject = f"New Appointment: {appointment.patient_name}"
                     message = f"""
 New Appointment Confirmed (Payment Successful)
@@ -156,3 +161,25 @@ Stripe Session ID: {session['id']}
                 pass
 
     return HttpResponse(status=200)
+
+
+
+#appointment details that is fetched by the payment-success/page.jsx. Yo na chalune yr, tio page le kei fetch na garne banaune baru bhanda
+# from django.http import JsonResponse
+# from .models import Appointment
+
+# def appointment_detail(request, appointment_id):
+#     try:
+#         appointment = Appointment.objects.get(id=appointment_id)
+#         data = {
+#             "id": appointment.id,
+#             "patient_name": appointment.patient_name,
+#             "patient_age": appointment.patient_age,
+#             "sex": appointment.sex,
+#             "reason": appointment.reason,
+#             "visit_time": appointment.visit_time,
+#             "doctor_name": appointment.doctor.doctor_name,
+#         }
+#         return JsonResponse(data)
+#     except Appointment.DoesNotExist:
+#         return JsonResponse({"error": "Appointment not found"}, status=404)
