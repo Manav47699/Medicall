@@ -48,6 +48,9 @@ class Appointment(models.Model):
     sex = models.CharField(max_length=10)
     reason = models.TextField()
     visit_time = models.DateTimeField()
+    number = models.CharField(max_length=20, null=True, blank=True)
+    your_email = models.EmailField(null=True, blank=True)
+
 
     # payment info
     status = models.CharField(

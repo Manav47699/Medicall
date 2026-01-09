@@ -17,16 +17,24 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 # -----------------------------
 # LIST ALL DOCTORS (API)
 # -----------------------------
+# views.py
+from django.conf import settings
+
 def doctors_list_view(request):
     doctors = Doctor_model.objects.all()
-
     data = []
+
     for doctor in doctors:
         data.append({
             "id": doctor.id,
             "name": doctor.doctor_name,
             "email": doctor.doctor_email,
             "qualifications": doctor.qualifications,
+            "photo": request.build_absolute_uri(doctor.photo.url) if doctor.photo else None,
+            "certificates": [
+                request.build_absolute_uri(cert.certificate.url) 
+                for cert in doctor.certificates.all()
+            ],
         })
 
     return JsonResponse(data, safe=False)
@@ -52,6 +60,8 @@ def create_appointment(request, doctor_id):
         sex=data.get("sex"),
         reason=data.get("reason"),
         visit_time=data.get("visit_time"),
+        number = data.get("number"),
+        your_email = data.get("your_email"),
         status="pending",
     )
 
@@ -145,6 +155,11 @@ Age: {appointment.patient_age}
 Sex: {appointment.sex}
 Reason: {appointment.reason}
 Visit Time: {appointment.visit_time}
+
+Contact Details:
+Phone: {appointment.number}
+Email: {appointment.your_email}
+
 
 Stripe Session ID: {session['id']}
 """
