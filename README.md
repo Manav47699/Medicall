@@ -46,4 +46,41 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 ---------------------------------------------------------------------------------------------------------------------
 Now using stripe web-hooks. Using this, stripe will let our backend know when the payment is approved. 
 --------------------------------------------------------------------------------------------------------------------
-# WEB-HOOKS: 
+# WEB-HOOKS: Webhooks as basically urls that gets hit by the server once some action is done. For our case, the webhook is /doctors/stripe/webhook/ as we have set to in doctors/urls.py and the server in our case is Stripe.
+
+# Step 3: In your stripe dashboard, select your webhook event. Event that will activate the webhook.
+- In your stripe dashboard, search for "webhook".
+- There you will see a event options. For payment, we choose "checkout.session.completed". This marks the payment as completed.
+
+# Step 4: Create a webhook and a webhook session in your django project
+- in views.py add the session function. Something like this.
+```
+@csrf_exempt
+def stripe_webhook(request):
+    payload = request.body
+    sig_header = request.META.get("HTTP_STRIPE_SIGNATURE")
+
+    event = stripe.Webhook.construct_event(
+        payload,
+        sig_header,
+        settings.STRIPE_WEBHOOK_SECRET
+    )
+
+    if event["type"] == "checkout.session.completed":
+        # mark appointment paid
+        # send email
+
+    return HttpResponse(status=200)
+
+```
+- in global urls.py add the path.
+```
+path('doctors/', include('doctors.urls')),
+```
+- in doctors/urls.py, complete the route
+```
+path("stripe/webhook/", views.stripe_webhook),
+
+```
+- this creates the webhook endpoint -> http://localhost:8000/doctors/stripe/webhook/
+

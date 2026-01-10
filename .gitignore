@@ -60,3 +60,8 @@ Thumbs.db
 # ---------------------------
 # Ignore compiled shared libraries
 *.so
+
+
+
+#ignore the finetuned models
+models
