@@ -17,6 +17,5 @@ urlpatterns = [
     path('stripe/create-checkout-session/', views.create_checkout_session, name='create-checkout-session'),
     path('stripe/webhook/', views.stripe_webhook, name='stripe-webhook'),
     # path('appointments/<int:appointment_id>/', views.appointment_detail, name='appointment-detail'),
-
 ]
 
